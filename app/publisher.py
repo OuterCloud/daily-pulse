@@ -62,20 +62,35 @@ def _extract_body(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def _build_post(src: Path, date_str: str, lang: str = "zh") -> str:
+def _build_post(
+    src: Path, date_str: str, lang: str = "zh", is_research: bool = False
+) -> str:
     title = _extract_title(src)
     body = _extract_body(src)
+
+    # Chirpy theme front matter
+    if is_research:
+        categories = "  - Research"
+        tags = f"  - research\n  - {lang}"
+    else:
+        categories = "  - Digest"
+        tags = f"  - {lang}\n  - daily"
+
     return (
-        f'---\nlayout: post\ntitle: "{title}"\n'
-        f"date: {date_str} 09:00:00 +0800\ncategories: digest\nlang: {lang}\n---\n\n{body}"
+        f"---\n"
+        f'title: "{title}"\n'
+        f"date: {date_str} 09:00:00 +0800\n"
+        f"categories:\n{categories}\n"
+        f"tags:\n{tags}\n"
+        f"---\n\n{body}"
     )
 
 
 def _write_post_if_changed(
-    src: Path, dest: Path, date_str: str, lang: str = "zh"
+    src: Path, dest: Path, date_str: str, lang: str = "zh", is_research: bool = False
 ) -> bool:
     """写入 post 文件，内容未变则跳过。返回是否实际写入。"""
-    content = _build_post(src, date_str, lang)
+    content = _build_post(src, date_str, lang, is_research)
     if dest.exists() and dest.read_text(encoding="utf-8") == content:
         return False
     dest.write_text(content, encoding="utf-8")
@@ -123,21 +138,20 @@ async def publish_reports(
 
     posts_dir.mkdir(parents=True, exist_ok=True)
 
-    # 3. 同步模板文件（每次发布都更新，确保最新布局/样式/JS）
+    # 3. 同步模板文件（每次发布都更新，确保最新配置）
     initialized = not (_GH_PAGES_DIR / "_config.yml").exists()
     if initialized:
         yield _sse({"status": "initializing", "message": "初始化 Jekyll 站点..."})
-        (_GH_PAGES_DIR / ".gitignore").write_text(
-            "_site/\n.sass-cache/\n.jekyll-cache/\n.jekyll-metadata\nvendor/\nGemfile.lock\n",
-            encoding="utf-8",
-        )
     if _TEMPLATE_DIR.exists():
         for src in sorted(_TEMPLATE_DIR.rglob("*")):
             if src.is_file():
                 rel = src.relative_to(_TEMPLATE_DIR)
                 dest = _GH_PAGES_DIR / rel
                 dest.parent.mkdir(parents=True, exist_ok=True)
-                dest.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+                new_content = src.read_text(encoding="utf-8")
+                # 只在内容变化时写入
+                if not dest.exists() or dest.read_text(encoding="utf-8") != new_content:
+                    dest.write_text(new_content, encoding="utf-8")
 
     # 4. 收集可发布的报告（新布局优先，旧版平铺兼容）
     # publishable: date_str -> {"zh": Path|None, "en": Path|None}
@@ -172,17 +186,13 @@ async def publish_reports(
 
     new_count = 0
     for date_str, files in sorted(publishable.items()):
-        dest_dir = posts_dir / date_str
-        dest_dir.mkdir(parents=True, exist_ok=True)
         changed = False
         if files["zh"]:
-            changed |= _write_post_if_changed(
-                files["zh"], dest_dir / f"{date_str}-zh.md", date_str, "zh"
-            )
+            dest = posts_dir / f"{date_str}-zh.md"
+            changed |= _write_post_if_changed(files["zh"], dest, date_str, "zh")
         if files["en"]:
-            changed |= _write_post_if_changed(
-                files["en"], dest_dir / f"{date_str}-en.md", date_str, "en"
-            )
+            dest = posts_dir / f"{date_str}-en.md"
+            changed |= _write_post_if_changed(files["en"], dest, date_str, "en")
         if changed:
             new_count += 1
 
@@ -195,10 +205,10 @@ async def publish_reports(
             for src in day_dir.glob("research-*.md"):
                 if not _RESEARCH_RE.match(src.stem):
                     continue
-                dest_dir = posts_dir / d_str
-                dest_dir.mkdir(parents=True, exist_ok=True)
                 dest_name = f"{d_str}-{src.stem}.md"
-                if _write_post_if_changed(src, dest_dir / dest_name, d_str, "zh"):
+                if _write_post_if_changed(
+                    src, posts_dir / dest_name, d_str, "zh", is_research=True
+                ):
                     new_count += 1
 
     yield _sse({"status": "copying", "new": new_count, "skip": 0})
