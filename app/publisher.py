@@ -47,8 +47,24 @@ def _push_url(repo_url: str, token: str) -> str:
 def _extract_title(path: Path) -> str:
     for line in path.read_text(encoding="utf-8").splitlines():
         if line.startswith("# "):
-            return line[2:].strip().replace('"', "'")
-    return f"Tech Digest {path.stem}"
+            candidate = line[2:].strip().replace('"', "'")
+            # 只有包含 DailyPulse/Daily/日期 的才算合格标题
+            if "DailyPulse" in candidate or "Daily Tech" in candidate:
+                return candidate
+            # 否则跳过（如"今日财经速递"），用 fallback
+            break
+    # fallback：根据文件名生成标准标题
+    stem = path.stem
+    date_str = path.parent.name if _DATE_RE.match(path.parent.name) else ""
+    if "research" in stem:
+        return (
+            f"DailyPulse · 调研报告 | {date_str}"
+            if date_str
+            else "DailyPulse · 调研报告"
+        )
+    return (
+        f"DailyPulse · 每日脉搏 | {date_str}" if date_str else "DailyPulse · 每日脉搏"
+    )
 
 
 def _extract_body(path: Path) -> str:
@@ -59,7 +75,8 @@ def _extract_body(path: Path) -> str:
             pre = "".join(lines[:i]).strip()
             post = "".join(lines[i + 1 :]).lstrip("\n")
             return (pre + "\n\n" + post) if pre else post
-    return path.read_text(encoding="utf-8")
+    # 没有 # 标题行，整个文件内容作为正文
+    return path.read_text(encoding="utf-8").strip()
 
 
 def _build_post(
