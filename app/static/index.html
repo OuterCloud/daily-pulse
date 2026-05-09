@@ -8,7 +8,7 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.0/github-markdown-light.min.css"
     />
-    <link rel="stylesheet" href="/static/style.css?v=18" />
+    <link rel="stylesheet" href="/static/style.css?v=20" />
   </head>
   <body>
     <div id="app">
@@ -37,12 +37,43 @@
         </div>
 
         <div id="history-section">
-          <h2>每日脉搏报告 / Briefings</h2>
+          <h2 class="section-toggle" onclick="toggleSection('history')">
+            <span>每日脉搏报告 / Briefings</span>
+            <svg
+              class="toggle-arrow"
+              id="history-arrow"
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </h2>
           <ul id="report-list"></ul>
         </div>
 
         <div id="research-history-section">
-          <h2>调研报告 / Research</h2>
+          <h2
+            class="section-toggle"
+            onclick="toggleSection('research-history')"
+          >
+            <span>调研报告 / Research</span>
+            <svg
+              class="toggle-arrow"
+              id="research-history-arrow"
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </h2>
           <ul id="research-list"></ul>
         </div>
 
@@ -274,6 +305,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="/static/app.js?v=20"></script>
+    <script src="/static/app.js?v=21"></script>
   </body>
 </html>

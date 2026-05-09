@@ -6,6 +6,14 @@ let reportsMetadata = {};
 let viewMode = "none"; // "none" | "report" | "research"
 let pagesBaseUrl = ""; // GitHub Pages base URL
 
+/* ── Section toggle ── */
+function toggleSection(sectionId) {
+  const section = document.getElementById(sectionId + "-section");
+  if (section) {
+    section.classList.toggle("collapsed");
+  }
+}
+
 /* ── Init ── */
 document.addEventListener("DOMContentLoaded", () => {
   loadReportList();
