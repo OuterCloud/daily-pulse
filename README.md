@@ -106,7 +106,7 @@ bash service.sh logs -f             # 实时追踪日志
 ## 项目结构
 
 ```
-fine-new-tech/
+daily-pulse/
 ├── deploy.sh              # 部署脚本
 ├── service.sh             # 服务管理脚本
 ├── requirements.txt
