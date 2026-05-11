@@ -144,6 +144,7 @@ async def publish_reports(
     repo_url: str,
     github_token: str = "",
     force_all: bool = False,
+    site_email: str = "",
 ) -> AsyncGenerator[str, None]:
     """
     异步生成器，依次 yield SSE 事件字符串。
@@ -189,6 +190,9 @@ async def publish_reports(
                 dest = _GH_PAGES_DIR / rel
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 new_content = src.read_text(encoding="utf-8")
+                # _config.yml 做占位符替换
+                if rel == Path("_config.yml"):
+                    new_content = _render_config(new_content, repo_url, site_email)
                 # 只在内容变化时写入
                 if not dest.exists() or dest.read_text(encoding="utf-8") != new_content:
                     dest.write_text(new_content, encoding="utf-8")
@@ -294,6 +298,30 @@ async def publish_reports(
 
     pages_url = _pages_url(repo_url)
     yield _sse({"status": "complete", "new": new_count, "url": pages_url})
+
+
+def _render_config(content: str, repo_url: str, site_email: str = "") -> str:
+    """将 _config.yml 中的 {{ }} 占位符替换为从 GITHUB_PAGES_REPO 推导出的实际值。"""
+    url = repo_url.removesuffix(".git").replace("https://github.com/", "")
+    parts = url.split("/")
+    if len(parts) == 2:
+        user, repo = parts
+        site_url = f"https://{user}.github.io"
+        site_baseurl = f"/{repo}"
+        github_username = user
+        social_link = f"https://github.com/{user}"
+    else:
+        site_url = site_baseurl = github_username = social_link = ""
+
+    for placeholder, value in {
+        "{{ SITE_URL }}": site_url,
+        "{{ SITE_BASEURL }}": site_baseurl,
+        "{{ GITHUB_USERNAME }}": github_username,
+        "{{ SITE_EMAIL }}": site_email,
+        "{{ SITE_SOCIAL_LINK }}": social_link,
+    }.items():
+        content = content.replace(placeholder, value)
+    return content
 
 
 def _pages_url(repo_url: str) -> str:

@@ -62,6 +62,13 @@ CONFIG_FIELDS = [
         "发布",
         "GitHub Personal Access Token，用于推送到仓库，需要 repo 权限",
     ),
+    (
+        "SITE_EMAIL",
+        "站点联系邮箱",
+        False,
+        "发布",
+        "显示在 GitHub Pages 站点上的联系邮箱（可选）",
+    ),
 ]
 
 
@@ -74,6 +81,7 @@ class Settings(BaseSettings):
     max_hn_stories: int = 30
     github_pages_repo: str = ""
     github_token: str = ""
+    site_email: str = ""
 
     class Config:
         env_file = ".env"

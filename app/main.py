@@ -226,6 +226,7 @@ async def publish(force: bool = False):
             repo_url=_config.settings.github_pages_repo,
             github_token=_config.settings.github_token,
             force_all=force,
+            site_email=_config.settings.site_email,
         ):
             yield event
 
