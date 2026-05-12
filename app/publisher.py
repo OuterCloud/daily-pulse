@@ -197,7 +197,7 @@ async def publish_reports(
                 # 避免不同机器因 SITE_EMAIL 等差异反复覆盖彼此的配置
                 if rel == Path("_config.yml"):
                     new_content = _render_config(new_content, repo_url, site_email)
-                    if dest.exists() and not _config_url_changed(new_content, dest.read_text(encoding="utf-8")):
+                    if dest.exists() and not _config_needs_update(new_content, dest.read_text(encoding="utf-8")):
                         continue
                 # 只在内容变化时写入
                 if not dest.exists() or dest.read_text(encoding="utf-8") != new_content:
@@ -306,18 +306,14 @@ async def publish_reports(
     yield _sse({"status": "complete", "new": new_count, "url": pages_url})
 
 
-def _config_url_changed(rendered: str, existing: str) -> bool:
-    """只比较 url / baseurl，这两个字段决定 CSS 路径，其余差异忽略。"""
-    def get(text: str, key: str) -> str:
-        for line in text.splitlines():
-            stripped = line.strip()
-            if stripped.startswith(key + ":"):
-                return stripped.split(":", 1)[1].strip().strip('"').strip("'")
-        return ""
-    for key in ("url", "baseurl"):
-        if get(rendered, key) != get(existing, key):
-            return True
-    return False
+def _config_needs_update(rendered: str, existing: str) -> bool:
+    """比较 _config.yml，忽略 email 字段差异（各机器 .env 可能不同），其余字段均比较。"""
+    def normalize(text: str) -> str:
+        return "\n".join(
+            line for line in text.splitlines()
+            if not line.strip().startswith("email:")
+        )
+    return normalize(rendered) != normalize(existing)
 
 
 def _render_config(content: str, repo_url: str, site_email: str = "") -> str:
